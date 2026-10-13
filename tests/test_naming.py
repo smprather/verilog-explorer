@@ -69,6 +69,8 @@ def test_auto_names_are_detected():
     assert is_auto_name("$auto$ff.cc:337:slice$28794")
     assert is_auto_name("$0\\rstate[2:0]")
     assert is_auto_name("_unused_r2")
+    # A function's locals keep the function's name at the front: the marker is mid-name.
+    assert is_auto_name("crc16_byte$func$rtl/pe_ctrl.v:458$2247.crc")
     assert not is_auto_name("resp_buf")
     assert not is_auto_name("clk")
 

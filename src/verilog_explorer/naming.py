@@ -30,6 +30,10 @@ _PARAM_TAIL = re.compile(r"^\$paramod(?:\$[0-9a-f]{40})?\\[^\\]+\\?(.*)$")
 _NUMBERED = re.compile(r"^[su]?\d*'([01_]+)$")
 
 _AUTO_PREFIXES = ("$", "_unused")
+#: yosys names a function's locals `crc16_byte$func$rtl/pe_ctrl.v:458$2247.crc`, so the
+#: marker sits in the middle of the name and a prefix test alone misses them — which is
+#: most of the constant-driven nets a naive filter would report.
+_FUNC_LOCAL = "$func$"
 
 
 def module_label(module: Module) -> str:
@@ -63,7 +67,7 @@ def decode_param(value: str) -> str:
 
 def is_auto_name(name: str) -> bool:
     """True for the names synthesis invented, which no human chose."""
-    return name.startswith(_AUTO_PREFIXES)
+    return name.startswith(_AUTO_PREFIXES) or _FUNC_LOCAL in name
 
 
 def format_bits(bits: tuple[Bit, ...]) -> str:
