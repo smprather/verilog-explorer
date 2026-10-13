@@ -1,4 +1,4 @@
-"""The structural observations worth showing, and the ones this flavour can prove.
+r"""The structural observations worth showing, and the ones this flavour can prove.
 
 WHY THIS EXISTS. A netlist can be asked hundreds of questions and can answer only some of
 them. This module holds the ones worth asking — each one measured on the reference design
