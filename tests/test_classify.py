@@ -20,7 +20,10 @@ def design():
     return make_design(
         {
             "top": make_module(
-                "top", hdlname="top", is_top=True, cells={"u_g": make_cell("u_g", "sg13g2_inv_1")}
+                "top",
+                hdlname="top",
+                is_top=True,
+                cells={"u_g": make_cell("u_g", "sg13g2_inv_1")},
             ),
             "sg13g2_dfrbpq_1": make_module("sg13g2_dfrbpq_1"),
             "sg13g2_dlhq_1": make_module("sg13g2_dlhq_1"),
@@ -28,7 +31,9 @@ def design():
             "sg13g2_inv_1": make_module("sg13g2_inv_1"),
             "RM_IHPSG13_1P_1024x16_c2_bm_bist": make_module("RM_IHPSG13_1P_1024x16_c2_bm_bist"),
             "pe_cpu": make_module(
-                "pe_cpu", hdlname="pe_cpu", cells={"u_g": make_cell("u_g", "sg13g2_inv_1")}
+                "pe_cpu",
+                hdlname="pe_cpu",
+                cells={"u_g": make_cell("u_g", "sg13g2_inv_1")},
             ),
         }
     )
@@ -50,6 +55,20 @@ def test_a_level_sensitive_cell_is_a_latch():
         "sg13g2_dlhq_1",
         connections={"D": (2,), "G": (1,), "Q": (3,)},
         port_directions={"D": "input", "G": "input", "Q": "output"},
+    )
+    assert cell_kind(cell, design()) == "latch"
+
+
+def test_the_ihp_library_names_the_enable_gate():
+    # The reference design's two pe_dru latches are sg13g2_dlhq_1 with ports D/GATE/Q.
+    # A fixture that guessed `G` classified them as plain gates, and the real-design
+    # acceptance test is what caught it.
+    cell = make_cell(
+        "$auto$ff.cc:337:slice$28012",
+        "sg13g2_dlhq_1",
+        src="rtl/pe_dru.v:185.15-185.15",
+        connections={"D": (4,), "GATE": (2,), "Q": (170,)},
+        port_directions={"D": "input", "GATE": "input", "Q": "output"},
     )
     assert cell_kind(cell, design()) == "latch"
 

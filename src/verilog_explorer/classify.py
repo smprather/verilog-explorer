@@ -15,8 +15,11 @@ from verilog_explorer.model import Cell, Design
 
 #: Ports that mean "captured on an edge".
 CLOCK_PORTS = frozenset({"CLK", "C", "CK"})
-#: Ports that mean "transparent while asserted".
-GATE_PORTS = frozenset({"G", "EN", "E"})
+#: Ports that mean "transparent while asserted". The IHP libraries name this `GATE`,
+#: not `G` — the reference design's two `pe_dru` latches are `sg13g2_dlhq_1` with ports
+#: `D`/`GATE`/`Q`, and a fixture that guessed `G` classified them as plain gates until
+#: the real-design acceptance test caught it.
+GATE_PORTS = frozenset({"G", "EN", "E", "GATE"})
 DATA_IN = "D"
 DATA_OUT = "Q"
 

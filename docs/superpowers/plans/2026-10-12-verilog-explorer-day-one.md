@@ -76,28 +76,47 @@ NETLIST = {
     "modules": {
         "top": {
             "attributes": {"top": "00000000000000000000000000000001"},
-            "ports": {"a": {"direction": "input", "bits": [2]},
-                      "y": {"direction": "output", "bits": [3]}},
-            "cells": {"u_sub": {"hide_name": 0, "type": "sub",
-                                "port_directions": {"a": "input", "y": "output"},
-                                "connections": {"a": ["2"], "y": ["3"]},
-                                "parameters": {}, "attributes": {"src": "t.v:3.1-3.9"}}},
+            "ports": {
+                "a": {"direction": "input", "bits": [2]},
+                "y": {"direction": "output", "bits": [3]},
+            },
+            "cells": {
+                "u_sub": {
+                    "hide_name": 0,
+                    "type": "sub",
+                    "port_directions": {"a": "input", "y": "output"},
+                    "connections": {"a": ["2"], "y": ["3"]},
+                    "parameters": {},
+                    "attributes": {"src": "t.v:3.1-3.9"},
+                }
+            },
             "netnames": {"a": {"hide_name": 0, "bits": [2]}},
         },
-        "sub": {"attributes": {"hdlname": "sub"},
-                "ports": {"a": {"direction": "input", "bits": [0]}},
-                "cells": {},
-                "netnames": {}},
-        "sg13g2_nand2_1": {"attributes": {}, "ports": {"A": {"direction": "input", "bits": [0]}},
-                           "cells": {}, "netnames": {}},
-        "RM_IHPSG13_1P_1024x16_c2_bm_bist": {"attributes": {"blackbox": "00"},
-                                             "ports": {}, "cells": {}, "netnames": {}},
+        "sub": {
+            "attributes": {"hdlname": "sub"},
+            "ports": {"a": {"direction": "input", "bits": [0]}},
+            "cells": {},
+            "netnames": {},
+        },
+        "sg13g2_nand2_1": {
+            "attributes": {},
+            "ports": {"A": {"direction": "input", "bits": [0]}},
+            "cells": {},
+            "netnames": {},
+        },
+        "RM_IHPSG13_1P_1024x16_c2_bm_bist": {
+            "attributes": {"blackbox": "00"},
+            "ports": {},
+            "cells": {},
+            "netnames": {},
+        },
     },
 }
 
 
 def test_stub_is_a_module_with_no_cells(tmp_path):
-    p = tmp_path / "n.json"; p.write_text(json.dumps(NETLIST))
+    p = tmp_path / "n.json"
+    p.write_text(json.dumps(NETLIST))
     d = load_design(p)
     assert d.modules["top"].is_stub is False
     assert d.modules["sg13g2_nand2_1"].is_stub is True
@@ -105,7 +124,8 @@ def test_stub_is_a_module_with_no_cells(tmp_path):
 
 
 def test_bits_stay_strings_and_keep_order(tmp_path):
-    p = tmp_path / "n.json"; p.write_text(json.dumps(NETLIST))
+    p = tmp_path / "n.json"
+    p.write_text(json.dumps(NETLIST))
     d = load_design(p)
     assert d.modules["top"].cells["u_sub"].connections["a"] == ("2",)
 
@@ -115,7 +135,8 @@ def test_constants_are_recognised():
 
 
 def test_flavour_is_mapped_when_sg13g2_cells_appear(tmp_path):
-    p = tmp_path / "n.json"; p.write_text(json.dumps(NETLIST))
+    p = tmp_path / "n.json"
+    p.write_text(json.dumps(NETLIST))
     assert load_design(p).flavour == "mapped"
 ```
 
@@ -143,19 +164,27 @@ def test_flavour_is_mapped_when_sg13g2_cells_appear(tmp_path):
 
 ```python
 def test_module_label_prefers_hdlname():
-    m = mod(name="$paramod\\pe_ctrl\\WORDS=s32'00000000000000000000010000000000",
-            hdlname="pe_ctrl", cells={})
+    m = mod(
+        name="$paramod\\pe_ctrl\\WORDS=s32'00000000000000000000010000000000",
+        hdlname="pe_ctrl",
+        cells={},
+    )
     assert module_label(m) == "pe_ctrl"
 
 
 def test_module_label_falls_back_to_strip_without_hdlname():
-    m = mod(name="$paramod$7f9518eacb819f12609a81d25055eeb8d348b0ad\\pe_soc", hdlname=None, cells={})
+    m = mod(
+        name="$paramod$7f9518eacb819f12609a81d25055eeb8d348b0ad\\pe_soc", hdlname=None, cells={}
+    )
     assert module_label(m) == "pe_soc"
 
 
 def test_parameter_badge_decodes_a_binary_s32():
-    m = mod(name="$paramod\\pe_ctrl\\WORDS=s32'00000000000000000000010000000000",
-            hdlname="pe_ctrl", cells={})
+    m = mod(
+        name="$paramod\\pe_ctrl\\WORDS=s32'00000000000000000000010000000000",
+        hdlname="pe_ctrl",
+        cells={},
+    )
     assert parameter_badges(m) == ["WORDS=1024"]
 
 
@@ -171,8 +200,12 @@ def test_auto_names_are_detected():
 
 
 def test_net_label_prefers_the_human_name_for_a_bit():
-    m = mod(name="pe_ctrl", hdlname="pe_ctrl", cells={},
-            netnames={"clk": ("7",), "$abc$1$new_n5": ("7",)})
+    m = mod(
+        name="pe_ctrl",
+        hdlname="pe_ctrl",
+        cells={},
+        netnames={"clk": ("7",), "$abc$1$new_n5": ("7",)},
+    )
     assert net_label(m, "7") == "clk"
 ```
 
