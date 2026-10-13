@@ -20,3 +20,11 @@ build-backend = "uv_build"
 dev = [
     "pytest>=9.1.1",
 ]
+
+[tool.pyright]
+# src layout: the package is importable from src/ as well as from the
+# installed editable copy, so a language server resolves it either way.
+include = ["src", "tests"]
+extraPaths = ["src"]
+venvPath = "."
+venv = ".venv"
