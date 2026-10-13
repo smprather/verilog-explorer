@@ -33,6 +33,11 @@ def test_parse_src_rejects_nonsense():
     assert parse_src("") is None
 
 
+def test_parse_src_tolerates_surrounding_whitespace():
+    # Real `src` values arrive out of the file with no stray space; say so either way.
+    assert parse_src("  rtl/pe_ctrl.v:1.1-2.1\n") == ("rtl/pe_ctrl.v", 1, 2)
+
+
 def test_locate_resolves_against_the_synthesis_root(tmp_path):
     target = tmp_path / "rtl" / "pe_ctrl.v"
     target.parent.mkdir(parents=True)
