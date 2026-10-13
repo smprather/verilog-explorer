@@ -211,3 +211,31 @@ def test_negative_results_are_mapped_only_and_never_claim_width_truncation():
     assert not any("width truncation" in line for line in mapped)
     rtl_ish = make_design({module.name: module}, flavour="rtl-ish")
     assert negative_results(rtl_ish) == []
+
+
+def test_findings_are_labelled_with_the_module_label_not_the_key():
+    # The whole reason naming.py exists: a parameter-mangled module key must never
+    # reach a reader. A dead net inside pe_ctrl should read `pe_ctrl.<net>`.
+    module = make_module(
+        "$paramod\\pe_ctrl\\WORDS=s32'00000000000000000000010000000000",
+        hdlname="pe_ctrl",
+        netnames={"crc_state": make_net("crc_state", (5, 6))},
+    )
+    found = [f for f in detect(design_with(module)) if f.code == "dead-net"]
+    assert [f.subject for f in found] == ["pe_ctrl.crc_state"]
+
+
+def test_every_finding_names_the_module_it_came_from():
+    # The viewer filters findings by module key. A finding without that field is a
+    # finding the page computes and then never shows.
+    module = make_module(
+        "$paramod\\pe_dru\\SPB=s32'00000000000000000000000000001100",
+        hdlname="pe_dru",
+        cells={"u_la": latch()},
+        netnames={"dead": make_net("dead", (9,))},
+    )
+    design = make_design({module.name: replace(module, is_stub=False), **stubs()})
+    found = detect(design)
+    assert found
+    for finding in found:
+        assert finding.module == module.name, finding

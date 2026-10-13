@@ -13,6 +13,10 @@ Two rules are baked in:
 * A negative result may only be printed if the loaded flavour can compute it. A mapped
   netlist carries no width metadata at all, so "no width truncation" is not a thing it can
   say, and it does not say it.
+
+And one rule about presentation: a finding is labelled with the module's **readable** name.
+`$paramod\pe_ctrl\WORDS=s32'0…100` is a key, not a name, and a finding nobody can read is a
+finding nobody acts on — which is the whole failure this tool exists to prevent.
 """
 
 from __future__ import annotations
@@ -24,7 +28,7 @@ from dataclasses import dataclass
 
 from verilog_explorer.classify import FLOP, LATCH, MACRO, cell_kind
 from verilog_explorer.model import FLAVOUR_MAPPED, Bit, Cell, Design, Module, is_const
-from verilog_explorer.naming import is_auto_name, net_label
+from verilog_explorer.naming import is_auto_name, module_label, net_label
 from verilog_explorer.nets import NetIndex
 
 #: A structural fact that is wrong whatever the RTL meant.
@@ -40,13 +44,18 @@ _ARRAY = re.compile(r"^(?P<base>.+?)\[")
 
 @dataclass(frozen=True, slots=True)
 class Finding:
-    """One thing worth knowing about the design, and where it came from."""
+    """One thing worth knowing about the design, and where it came from.
+
+    `subject` is what a reader sees, so it is labelled with the readable module name.
+    `module` is the module key, which is how the viewer groups findings under a module.
+    """
 
     code: str
     subject: str
     detail: str
     klass: str
     where: str | None = None
+    module: str = ""
 
 
 def detect(design: Design, *, per_module: Mapping[str, NetIndex] | None = None) -> list[Finding]:
@@ -96,6 +105,11 @@ def negative_results(design: Design) -> list[str]:
     ]
 
 
+def _subject(module: Module, name: str) -> str:
+    """`pe_ctrl.resp_buf` — the readable label, never the `$paramod…` key."""
+    return f"{module_label(module)}.{name}"
+
+
 def _sequential_and_macros(module: Module, design: Design) -> list[Finding]:
     findings: list[Finding] = []
     for cell in module.cells.values():
@@ -104,22 +118,24 @@ def _sequential_and_macros(module: Module, design: Design) -> list[Finding]:
             findings.append(
                 Finding(
                     code="latch",
-                    subject=f"{module.name}.{cell.name}",
+                    subject=_subject(module, cell.name),
                     detail=f"{cell.type} holds state and is neither a flop nor a memory",
                     klass=OBSERVATION,
                     where=cell.src,
+                    module=module.name,
                 )
             )
         elif kind == MACRO:
             findings.append(
                 Finding(
                     code="macro",
-                    subject=f"{module.name}.{cell.name}",
+                    subject=_subject(module, cell.name),
                     detail=(
                         f"{cell.type} is a blackbox macro: there is no logic behind it to expand"
                     ),
                     klass=OBSERVATION,
                     where=cell.src,
+                    module=module.name,
                 )
             )
     return findings
@@ -129,9 +145,10 @@ def _dead_nets(module: Module, index: NetIndex) -> list[Finding]:
     return [
         Finding(
             code="dead-net",
-            subject=f"{module.name}.{net.name}",
+            subject=_subject(module, net.name),
             detail="no cell in this module reads it",
             klass=OBSERVATION,
+            module=module.name,
         )
         for net in index.dead_nets()
         if not is_auto_name(net.name)
@@ -142,9 +159,10 @@ def _constant_nets(module: Module) -> list[Finding]:
     return [
         Finding(
             code="constant-net",
-            subject=f"{module.name}.{net.name}",
+            subject=_subject(module, net.name),
             detail=f"driven to the constant {net.bits[0]}, not to a cell output",
             klass=OBSERVATION,
+            module=module.name,
         )
         for net in module.netnames.values()
         if not net.hide_name
@@ -173,12 +191,13 @@ def _register_files(module: Module, design: Design) -> list[Finding]:
     return [
         Finding(
             code="register-file",
-            subject=f"{module.name}.{base}",
+            subject=_subject(module, base),
             detail=(
                 f"{len(width)} bits of state held in {flops[base]} flops: the RTL calls "
                 "this an array, and synthesis built a register file rather than memory"
             ),
             klass=OBSERVATION,
+            module=module.name,
         )
         for base, width in bits.items()
         if len(width) >= REGISTER_FILE_MIN_BITS
@@ -202,11 +221,12 @@ def _undriven_outputs(module: Module) -> list[Finding]:
     return [
         Finding(
             code="undriven-output",
-            subject=f"{module.name}.{port.name}",
+            subject=_subject(module, port.name),
             detail=(
                 "no cell drives it, it aliases no module input, and it is not tied to a constant"
             ),
             klass=ERROR,
+            module=module.name,
         )
         for port in module.ports.values()
         if port.direction == "output"
@@ -224,9 +244,10 @@ def _multiple_drivers(module: Module) -> list[Finding]:
     return [
         Finding(
             code="multiple-drivers",
-            subject=f"{module.name}.{net_label(module, bit)}",
+            subject=_subject(module, net_label(module, bit)),
             detail=f"{len(cells)} cells drive this bit: {', '.join(c.type for c in cells)}",
             klass=ERROR,
+            module=module.name,
         )
         for bit, cells in drivers.items()
         if len(cells) > 1
