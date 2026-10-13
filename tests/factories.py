@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 
-from verilog_explorer.model import Bit, Cell, Module, Net, Port
+from verilog_explorer.model import Bit, Cell, Design, Module, Net, Port
 
 
 def make_cell(
@@ -61,3 +61,15 @@ def make_module(
         is_stub=(not cells) if is_stub is None else is_stub,
         is_top=is_top,
     )
+
+
+def make_design(
+    modules: Mapping[str, Module] | None = None,
+    flavour: str = "mapped",
+    top: str | None = None,
+) -> Design:
+    mods = dict(modules or {})
+    if top is None:
+        marked = [n for n, m in mods.items() if m.is_top and not m.is_stub]
+        top = marked[0] if marked else next((n for n, m in mods.items() if not m.is_stub), None)
+    return Design(modules=mods, flavour=flavour, top=top)

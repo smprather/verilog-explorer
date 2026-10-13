@@ -54,9 +54,7 @@ def load_design(path: Path | str) -> Design:
     except json.JSONDecodeError as exc:
         raise NotANetlistError(f"{path} is not JSON: {exc}") from exc
     if not isinstance(doc, dict) or not isinstance(doc.get("modules"), dict):
-        raise NotANetlistError(
-            f"{path} has no 'modules' object, so it is not a yosys JSON netlist"
-        )
+        raise NotANetlistError(f"{path} has no 'modules' object, so it is not a yosys JSON netlist")
     modules = {
         str(name): _module(str(name), body)
         for name, body in doc["modules"].items()
@@ -137,8 +135,7 @@ def _cell(name: str, body: Mapping[str, Any]) -> Cell:
         type=str(body.get("type", "")),
         src=str(src) if src else None,
         connections={
-            str(port): _bits(bits)
-            for port, bits in (body.get("connections") or {}).items()
+            str(port): _bits(bits) for port, bits in (body.get("connections") or {}).items()
         },
         port_directions={
             str(port): str(direction)
