@@ -3,9 +3,12 @@
 Three facts about the yosys JSON format shape everything here, and each of them
 cost a wrong measurement before it was written down:
 
-* A bit is a **string**: ``"12"`` is a module-local bit index, and ``"0" "1" "x"
-  "z"`` are constants. Keeping both as strings avoids an int/str union in every
-  consumer.
+* A bit is **either an int or a string**, and that is not a detail: yosys writes
+  bit *indices* as JSON numbers and *constants* as JSON strings (``"0" "1" "x"
+  "z"``). Stringifying both — the obvious simplification — makes bit 0 of every
+  bus indistinguishable from the constant 0, so a signal on bit 0 reads as a
+  constant and every fanout count that touches bit 0 is wrong. The model keeps
+  the format's own distinction.
 * Bit tuples are **unsorted and LSB-first by position**. Nothing in this package
   reorders them, and nothing assumes ``len(bits)`` is the signal's width.
 * A bit may carry many names and one name may repeat a bit. No structure here
@@ -21,6 +24,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+#: A module-local bit index (int) or a constant (str).
+Bit = int | str
+
+#: The constant entries yosys writes; kept for documentation and for parsers that
+#: stringify eagerly.
 CONST_BITS = frozenset({"0", "1", "x", "z"})
 
 FLAVOUR_MAPPED = "mapped"
@@ -28,9 +36,18 @@ FLAVOUR_RTLISH = "rtl-ish"
 FLAVOUR_UNKNOWN = "unknown"
 
 
-def is_const(bit: str) -> bool:
+def is_const(bit: Bit) -> bool:
     """True when a bit entry is a constant rather than a bit index."""
-    return bit in CONST_BITS
+    return isinstance(bit, str)
+
+
+def bit_key(bit: Bit) -> str:
+    """A stable, collision-free key for indexing a bit in a dict.
+
+    ``bit_key(0) == "b0"`` for index 0 and ``bit_key("0") == "c0"`` for the
+    constant, so the two can never collide.
+    """
+    return f"c{bit}" if isinstance(bit, str) else f"b{bit}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,19 +57,19 @@ class Cell:
     name: str
     type: str
     src: str | None = None
-    connections: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    connections: dict[str, tuple[Bit, ...]] = field(default_factory=dict)
     port_directions: dict[str, str] = field(default_factory=dict)
     parameters: dict[str, str] = field(default_factory=dict)
 
-    def bits_in(self, direction: str) -> tuple[str, ...]:
+    def bits_in(self, direction: str) -> tuple[Bit, ...]:
         """Every bit this cell touches through a port of the given direction."""
-        found: list[str] = []
+        found: list[Bit] = []
         for port, bits in self.connections.items():
             if self.port_directions.get(port) == direction:
                 found.extend(bits)
         return tuple(found)
 
-    def bit_of(self, port: str) -> tuple[str, ...]:
+    def bit_of(self, port: str) -> tuple[Bit, ...]:
         """The bits on one named port, or an empty tuple when absent."""
         return self.connections.get(port, ())
 
@@ -61,14 +78,14 @@ class Cell:
 class Port:
     name: str
     direction: str
-    bits: tuple[str, ...]
+    bits: tuple[Bit, ...]
     signed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
 class Net:
     name: str
-    bits: tuple[str, ...]
+    bits: tuple[Bit, ...]
     hide_name: bool = False
 
 

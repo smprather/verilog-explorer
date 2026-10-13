@@ -23,6 +23,7 @@ from verilog_explorer.model import (
     FLAVOUR_MAPPED,
     FLAVOUR_RTLISH,
     FLAVOUR_UNKNOWN,
+    Bit,
     Cell,
     Design,
     Module,
@@ -147,11 +148,16 @@ def _cell(name: str, body: Mapping[str, Any]) -> Cell:
     )
 
 
-def _bits(value: Any) -> tuple[str, ...]:
-    """A connection or net bit list as strings, in the document's own order."""
+def _bits(value: Any) -> tuple[Bit, ...]:
+    """A connection or net bit list as strings, in the document's own order.
+
+    Indices arrive as JSON numbers and stay ints; constants arrive as JSON
+    strings and stay strings. That distinction is the only thing separating index
+    0 from the constant 0, so it is preserved rather than normalised away.
+    """
     if not isinstance(value, (list, tuple)):
         return ()
-    return tuple(str(bit) for bit in value)
+    return tuple(bit if isinstance(bit, int) else str(bit) for bit in value)
 
 
 def _truthy(value: Any) -> bool:

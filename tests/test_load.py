@@ -28,7 +28,7 @@ NETLIST = {
                     "hide_name": 0,
                     "type": "sub",
                     "port_directions": {"a": "input", "y": "output"},
-                    "connections": {"a": ["2"], "y": ["3"]},
+                    "connections": {"a": [2], "y": [3]},
                     "parameters": {},
                     "attributes": {"src": "t.v:3.1-3.9"},
                 }
@@ -70,15 +70,18 @@ def test_stub_is_a_module_with_no_cells(tmp_path):
     assert d.modules["sub"].is_stub is True
 
 
-def test_bits_stay_strings_and_keep_order(tmp_path):
+def test_bit_indices_keep_their_type(tmp_path):
+    # yosys writes indices as JSON numbers and constants as JSON strings. If this
+    # normalised both to strings, bit 0 of every bus would read as the constant 0.
     d = load_design(write_netlist(tmp_path))
-    assert d.modules["top"].cells["u_sub"].connections["a"] == ("2",)
+    assert d.modules["top"].cells["u_sub"].connections["a"] == (2,)
 
 
 def test_constants_are_recognised():
     assert is_const("0")
     assert is_const("x")
-    assert not is_const("12")
+    assert not is_const(0)
+    assert not is_const(12)
 
 
 def test_flavour_is_mapped_when_a_mapped_cell_appears(tmp_path):
@@ -87,7 +90,7 @@ def test_flavour_is_mapped_when_a_mapped_cell_appears(tmp_path):
         "hide_name": 0,
         "type": "sg13g2_nand2_1",
         "port_directions": {"A": "input", "B": "input", "Y": "output"},
-        "connections": {"A": ["2"], "B": ["2"], "Y": ["3"]},
+        "connections": {"A": [2], "B": [2], "Y": [3]},
         "parameters": {},
         "attributes": {},
     }
